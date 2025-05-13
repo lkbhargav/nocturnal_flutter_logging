@@ -9,7 +9,7 @@ environment:
 # Add regular dependencies here.
 dependencies:
   dio: ^5.8.0+1
-  # path: ^1.8.0
+  ansicolor: ^2.0.1
 
 dev_dependencies:
   lints: ^5.0.0

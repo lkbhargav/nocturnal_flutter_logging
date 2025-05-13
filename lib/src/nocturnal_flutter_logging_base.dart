@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:ansicolor/ansicolor.dart';
 import 'package:dio/dio.dart';
 import 'package:nocturnal_flutter_logging/src/traits/logs.dart';
 
@@ -37,8 +38,10 @@ class ApplicationLogs extends LogsEXT {
       userId = _callback!();
     }
 
+    var timestamp = DateTime.now().toUtc().toIso8601String();
+
     final Map<String, String> logPayload = {
-      "timestamp": DateTime.now().toIso8601String(),
+      "timestamp": timestamp,
       "service": service,
       "environment": env.toString(),
       "severity": severity.toString(),
@@ -52,6 +55,13 @@ class ApplicationLogs extends LogsEXT {
 
     // log the messages to the console for dev environment
     if (env == Environment.dev) {
+      prettyPrint(
+        severity: severity,
+        message: message,
+        serviceName: service,
+        timestamp: timestamp,
+        extra: extra ?? <String, String>{},
+      );
       print(logPayload);
       return;
     }
@@ -68,6 +78,65 @@ class ApplicationLogs extends LogsEXT {
       _publishTimer = Timer(Duration(seconds: maxWaitInSeconds), () {
         publish();
       });
+    }
+  }
+
+  void prettyPrint({
+    required Severity severity,
+    required String message,
+    required String serviceName,
+    required String timestamp,
+    String? userId,
+    required Map<String, String> extra,
+  }) {
+    final blue = AnsiPen()..blue();
+    final green = AnsiPen()..green();
+    final yellow = AnsiPen()..yellow();
+    final red = AnsiPen()..red();
+    final brightRed = AnsiPen()..red(bold: true);
+    final dim = AnsiPen()..gray(level: 0.5);
+    final italic = (String text) => '\x1B[3m$text\x1B[0m';
+    final bold = (String text) => '\x1B[1m$text\x1B[0m';
+    final magenta = AnsiPen()..magenta();
+    final black = AnsiPen()..black();
+
+    String severityStr = severity.name.toUpperCase();
+    String coloredSeverity;
+    switch (severity) {
+      case Severity.debug:
+        coloredSeverity = blue(severityStr);
+        break;
+      case Severity.info:
+        coloredSeverity = green(severityStr);
+        break;
+      case Severity.warn:
+        coloredSeverity = yellow(severityStr);
+        break;
+      case Severity.error:
+        coloredSeverity = red(severityStr);
+        break;
+      case Severity.critical:
+        coloredSeverity = brightRed(severityStr);
+        break;
+    }
+
+    final formattedTimestamp = dim(italic(timestamp));
+    final formattedService = dim(italic(serviceName));
+    final formattedMessage = black(message);
+
+    final metadata = extra.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join(' | ');
+    final metadataStr = metadata.isNotEmpty ? ' | $metadata' : '';
+
+    if (userId != null) {
+      print(
+        '[$formattedTimestamp ${bold(coloredSeverity)} $formattedService] $formattedMessage | User ID: ${magenta(userId)}$metadataStr',
+      );
+    } else {
+      print(
+        '[$formattedTimestamp ${bold(coloredSeverity)} $formattedService] $formattedMessage$metadataStr',
+      );
     }
   }
 
