@@ -62,7 +62,6 @@ class ApplicationLogs extends LogsEXT {
         timestamp: timestamp,
         extra: extra ?? <String, String>{},
       );
-      print(logPayload);
       return;
     }
 
